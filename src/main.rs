@@ -6,7 +6,7 @@ fn main() -> std::io::Result<()> {
     let listener =
         TcpListener::bind("127.0.0.1:4221").unwrap();
 
-    let response = b"HHHHTTP/1.1 200 OK\\r\\n\\r\\n";
+    let response = b"HTTP/1.1 200 OK\\r\\n\\r\\n";
     for stream in listener.incoming() {
         match stream {
             Ok(mut open_stream) => {
