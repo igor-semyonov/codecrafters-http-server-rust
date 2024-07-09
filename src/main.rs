@@ -15,7 +15,7 @@ fn main() -> std::io::Result<()> {
                     open_stream.peer_addr()?
                 );
                 open_stream
-                    .write(response)?;
+                    .write_all(response)?;
             }
             Err(e) => {
                 println!(
