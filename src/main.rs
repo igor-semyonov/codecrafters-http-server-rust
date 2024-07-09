@@ -17,8 +17,9 @@ fn main() -> std::io::Result<()> {
                     open_stream.peer_addr()?
                 );
                 let mut request_buffer = [0_u8; 1024];
-                open_stream
+                let request_buffer_len = open_stream
                     .read(&mut request_buffer)?;
+                println!("{}", request_buffer_len);
                 let response = if request_buffer
                     .starts_with(b"GET / HTTP")
                 {
