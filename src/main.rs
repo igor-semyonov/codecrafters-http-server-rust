@@ -19,13 +19,35 @@ fn main() -> std::io::Result<()> {
                 let mut request_buffer = [0_u8; 1024];
                 let request_buffer_len = open_stream
                     .read(&mut request_buffer)?;
-                println!("{}", request_buffer_len);
                 let response = if request_buffer
                     .starts_with(b"GET / HTTP")
                 {
-                    "HTTP/1.1 200 OK\r\n\r\n"
+                    "HTTP/1.1 200 OK\r\n\r\n".to_string()
+                } else if request_buffer
+                    .starts_with(b"GET /echo/")
+                {
+                    let body = match std::str::from_utf8(
+                        &request_buffer,
+                    ) {
+                        Ok(request) => request
+                            .split_ascii_whitespace()
+                            .find(|s| {
+                                s.starts_with("/echo/")
+                            })
+                            .unwrap_or("/echo/NothingFound")
+                            .replace(
+                                "/echo/", "",
+                            ),
+                        Err(e) => format!(
+                            "Error {}",
+                            e
+                        ),
+                    };
+                    let body_len = body.len();
+                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", body_len, body)
                 } else {
                     "HTTP/1.1 404 Not Found\r\n\r\n"
+                        .to_string()
                 };
                 open_stream
                     .write_all(response.as_bytes())?;
