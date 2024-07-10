@@ -24,6 +24,28 @@ fn main() -> std::io::Result<()> {
                 {
                     "HTTP/1.1 200 OK\r\n\r\n".to_string()
                 } else if request_buffer
+                    .starts_with(b"GET /user-agent")
+                {
+                    let body = match std::str::from_utf8(
+                        &request_buffer,
+                    ) {
+                        Ok(request) => request
+                            .split("\r\n")
+                            .find(|s| {
+                                s.starts_with("User-Agent: ")
+                            })
+                            .unwrap_or("/echo/NothingFound")
+                            .replace(
+                                "User-Agent: ", "",
+                            ),
+                        Err(e) => format!(
+                            "Error {}",
+                            e
+                        ),
+                    };
+                    let body_len = body.len();
+                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", body_len, body)
+                } else if request_buffer
                     .starts_with(b"GET /echo/")
                 {
                     let body = match std::str::from_utf8(
