@@ -3,22 +3,39 @@ use std::{
     net::TcpListener,
 };
 
+mod request;
+use request::Request;
+
+const REQUEST_BUFFEX_SIZE: usize = 512;
+
 fn main() -> std::io::Result<()> {
     println!("Logs from your program will appear here!");
 
     let listener =
         TcpListener::bind("127.0.0.1:4221").unwrap();
 
-    for stream in listener.incoming() {
+    'stream: for stream in listener.incoming() {
         match stream {
             Ok(mut open_stream) => {
                 println!(
                     "accepted new connection from {}",
                     open_stream.peer_addr()?
                 );
-                let mut request_buffer = [0_u8; 1024];
+                let mut request_buffer =
+                    [0_u8; REQUEST_BUFFEX_SIZE];
                 let request_buffer_len = open_stream
                     .read(&mut request_buffer)?;
+                if request_buffer_len > REQUEST_BUFFEX_SIZE
+                {
+                    // received request that exceeds buffer
+                    // length
+                    continue 'stream;
+                }
+                let request_buffer = &request_buffer[0..request_buffer_len];
+                let request: Request = request_buffer
+                    .into();
+                println!("{:#?}", request);
+
                 let response = if request_buffer
                     .starts_with(b"GET / HTTP")
                 {
@@ -32,11 +49,14 @@ fn main() -> std::io::Result<()> {
                         Ok(request) => request
                             .split("\r\n")
                             .find(|s| {
-                                s.starts_with("User-Agent: ")
+                                s.starts_with(
+                                    "User-Agent: ",
+                                )
                             })
                             .unwrap_or("/echo/NothingFound")
                             .replace(
-                                "User-Agent: ", "",
+                                "User-Agent: ",
+                                "",
                             ),
                         Err(e) => format!(
                             "Error {}",
