@@ -3,8 +3,8 @@ use std::{
     net::TcpListener,
 };
 
-mod request;
-use request::Request;
+mod http;
+use http::*;
 
 const REQUEST_BUFFEX_SIZE: usize = 512;
 
@@ -31,68 +31,90 @@ fn main() -> std::io::Result<()> {
                     // length
                     continue 'stream;
                 }
-                let request_buffer = &request_buffer[0..request_buffer_len];
-                let request: Request = request_buffer
-                    .into();
-                println!("{:#?}", request);
+                let request_buffer =
+                    &request_buffer[0..request_buffer_len];
+                let request: Request =
+                    request_buffer.into();
 
-                let response = if request_buffer
-                    .starts_with(b"GET / HTTP")
+                let response = if request.method
+                    == HttpMethod::Get
+                    && request.target == "/"
                 {
-                    "HTTP/1.1 200 OK\r\n\r\n".to_string()
-                } else if request_buffer
-                    .starts_with(b"GET /user-agent")
+                    Response {
+                        version: HttpVersion::V1_1,
+                        code: ResponseCode::C200,
+                        headers:
+                            std::collections::HashMap::new(),
+                        body: "".to_string(),
+                    }
+                } else if request.method == HttpMethod::Get
+                    && request
+                        .target
+                        .starts_with("/user-agent")
                 {
-                    let body = match std::str::from_utf8(
-                        &request_buffer,
-                    ) {
-                        Ok(request) => request
-                            .split("\r\n")
-                            .find(|s| {
-                                s.starts_with(
-                                    "User-Agent: ",
-                                )
-                            })
-                            .unwrap_or("/echo/NothingFound")
-                            .replace(
-                                "User-Agent: ",
-                                "",
-                            ),
-                        Err(e) => format!(
-                            "Error {}",
-                            e
-                        ),
-                    };
-                    let body_len = body.len();
-                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", body_len, body)
-                } else if request_buffer
-                    .starts_with(b"GET /echo/")
+                    let body = request
+                        .headers
+                        .get("User-Agent")
+                        .unwrap()
+                        .to_string();
+                    let mut headers =
+                        std::collections::HashMap::new();
+                    headers.insert(
+                        "Content-Length".to_string(),
+                        body.as_bytes()
+                            .len()
+                            .to_string(),
+                    );
+                    headers.insert(
+                        "Content-Type".to_string(),
+                        "text/plain".to_string(),
+                    );
+                    Response {
+                        version: HttpVersion::V1_1,
+                        code: ResponseCode::C200,
+                        headers,
+                        body,
+                    }
+                } else if request.method == HttpMethod::Get
+                    && request
+                        .target
+                        .starts_with("/echo/")
                 {
-                    let body = match std::str::from_utf8(
-                        &request_buffer,
-                    ) {
-                        Ok(request) => request
-                            .split_ascii_whitespace()
-                            .find(|s| {
-                                s.starts_with("/echo/")
-                            })
-                            .unwrap_or("/echo/NothingFound")
-                            .replace(
-                                "/echo/", "",
-                            ),
-                        Err(e) => format!(
-                            "Error {}",
-                            e
-                        ),
-                    };
-                    let body_len = body.len();
-                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", body_len, body)
+                    let body = request
+                        .target
+                        .trim_start_matches("/echo/")
+                        .to_string();
+                    let mut headers =
+                        std::collections::HashMap::new();
+                    headers.insert(
+                        "Content-Length".to_string(),
+                        body.as_bytes()
+                            .len()
+                            .to_string(),
+                    );
+                    headers.insert(
+                        "Content-Type".to_string(),
+                        "text/plain".to_string(),
+                    );
+                    Response {
+                        version: HttpVersion::V1_1,
+                        code: ResponseCode::C200,
+                        headers,
+                        body,
+                    }
                 } else {
-                    "HTTP/1.1 404 Not Found\r\n\r\n"
-                        .to_string()
+                    let headers = std::collections::HashMap::new();
+                    Response {
+                        version: HttpVersion::V1_1,
+                        code: ResponseCode::C404,
+                        headers,
+                        body: "".to_string(),
+                    }
                 };
+                let s: String = response.into();
+                println!("{}", s);
                 open_stream
-                    .write_all(response.as_bytes())?;
+                    .write_all(s.as_bytes())?;
             }
             Err(e) => {
                 println!(
