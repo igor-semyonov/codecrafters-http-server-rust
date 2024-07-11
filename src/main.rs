@@ -112,7 +112,6 @@ fn main() -> std::io::Result<()> {
                     }
                 };
                 let s: String = response.into();
-                println!("{}", s);
                 open_stream
                     .write_all(s.as_bytes())?;
             }
