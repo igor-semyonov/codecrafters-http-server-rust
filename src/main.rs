@@ -137,6 +137,7 @@ fn handle_connection(
     } else if args
         .directory
         .is_some()
+        && request.method == HttpMethod::Get
         && request
             .target
             .starts_with("/files/")
@@ -183,6 +184,41 @@ fn handle_connection(
                     body: "".to_string(),
                 }
             }
+        }
+    } else if request.method == HttpMethod::Post
+        && request
+            .target
+            .starts_with("/files/")
+    {
+        let mut file = args
+            .directory
+            .unwrap()
+            .clone();
+        file.push(
+            request
+                .target
+                .trim_start_matches("/files/"),
+        );
+        let headers = std::collections::HashMap::new();
+        match std::fs::write(
+            file,
+            &request.body,
+        ) {
+            Ok(_) => Response {
+                version: HttpVersion::V1_1,
+                code: ResponseCode::C201,
+                headers,
+                body: "".to_string(),
+            },
+            Err(e) => Response {
+                version: HttpVersion::V1_1,
+                code: ResponseCode::C409,
+                headers,
+                body: format!(
+                    "Encountered error {}",
+                    e
+                ),
+            },
         }
     } else {
         let headers = std::collections::HashMap::new();

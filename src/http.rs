@@ -11,13 +11,17 @@ pub struct Response {
 #[derive(Debug, Copy, Clone)]
 pub enum ResponseCode {
     C200,
+    C201,
     C404,
+    C409,
 }
 impl From<ResponseCode> for u32 {
     fn from(code: ResponseCode) -> Self {
         match code {
             ResponseCode::C200 => 200,
+            ResponseCode::C201 => 201,
             ResponseCode::C404 => 404,
+            ResponseCode::C409 => 409,
         }
     }
 }
@@ -25,7 +29,9 @@ impl From<ResponseCode> for &str {
     fn from(code: ResponseCode) -> Self {
         match code {
             ResponseCode::C200 => "OK",
+            ResponseCode::C201 => "Created",
             ResponseCode::C404 => "Not Found",
+            ResponseCode::C409 => "Conflit",
         }
     }
 }
@@ -112,9 +118,9 @@ impl From<&[u8]> for Request {
             .next()
             .unwrap_or("Get")
         {
-            "Get" => HttpMethod::Get,
-            "Put" => HttpMethod::Put,
-            "Post" => HttpMethod::Post,
+            "GET" => HttpMethod::Get,
+            "PUT" => HttpMethod::Put,
+            "POST" => HttpMethod::Post,
             _ => HttpMethod::Get,
         };
         let target = request_line
