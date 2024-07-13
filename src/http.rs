@@ -210,25 +210,31 @@ impl std::fmt::Display for ResponseError {
 #[allow(dead_code)]
 pub enum CompressionMethod {
     Gzip,
-    None
+    None,
 }
 #[allow(dead_code)]
 impl From<CompressionMethod> for String {
     fn from(method: CompressionMethod) -> Self {
         use CompressionMethod::*;
         match method {
-            Gzip=> "gzip".to_string(),
+            Gzip => "gzip".to_string(),
             None => "".to_string(),
         }
     }
 }
 #[allow(dead_code)]
-impl From<&String> for CompressionMethod{
-    fn from(s: &String) ->CompressionMethod{
+impl From<String> for CompressionMethod {
+    fn from(s: String) -> CompressionMethod {
+        s.as_str()
+            .into()
+    }
+}
+impl From<&str> for CompressionMethod {
+    fn from(s: &str) -> CompressionMethod {
         use CompressionMethod::*;
-        match s.as_str(){
+        match s {
             "gzip" => Gzip,
-            _ => None
+            _ => None,
         }
     }
 }

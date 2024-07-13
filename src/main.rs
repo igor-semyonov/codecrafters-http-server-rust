@@ -230,13 +230,19 @@ fn handle_connection(
         }
     };
 
-    if let Some(compression_method) = request
+    let accepted_compression_schemes = ["gzip"];
+    if let Some(compression_methods) = request
         .headers
         .get("Accept-Encoding")
     {
-        if compression_method == "gzip" {
-            response.compress(compression_method.into());
-        };
+        match compression_methods
+            .split(",")
+            .map(|s| s.trim())
+            .filter(|s| accepted_compression_schemes.contains(s))
+            .next(){
+                Some(compression_method) =>response.compress(compression_method.into()),
+                None => {}
+            };
     };
 
     let s: String = response
