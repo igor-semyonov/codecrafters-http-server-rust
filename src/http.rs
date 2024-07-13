@@ -17,21 +17,23 @@ pub enum ResponseCode {
 }
 impl From<ResponseCode> for u32 {
     fn from(code: ResponseCode) -> Self {
+        use ResponseCode::*;
         match code {
-            ResponseCode::C200 => 200,
-            ResponseCode::C201 => 201,
-            ResponseCode::C404 => 404,
-            ResponseCode::C409 => 409,
+            C200 => 200,
+            C201 => 201,
+            C404 => 404,
+            C409 => 409,
         }
     }
 }
 impl From<ResponseCode> for &str {
     fn from(code: ResponseCode) -> Self {
+        use ResponseCode::*;
         match code {
-            ResponseCode::C200 => "OK",
-            ResponseCode::C201 => "Created",
-            ResponseCode::C404 => "Not Found",
-            ResponseCode::C409 => "Conflit",
+            C200 => "OK",
+            C201 => "Created",
+            C404 => "Not Found",
+            C409 => "Conflit",
         }
     }
 }
@@ -181,5 +183,62 @@ impl From<&[u8]> for Request {
             headers,
             body,
         }
+    }
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum ResponseError {
+    CompressionNotSupported,
+}
+
+impl std::fmt::Display for ResponseError {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
+        use ResponseError::*;
+        match self {
+            CompressionNotSupported => write!(
+                f,
+                "Tried to use unsopported compression scheme"
+            )
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub enum CompressionMethod {
+    Gzip,
+    None
+}
+#[allow(dead_code)]
+impl From<CompressionMethod> for String {
+    fn from(method: CompressionMethod) -> Self {
+        use CompressionMethod::*;
+        match method {
+            Gzip=> "gzip".to_string(),
+            None => "".to_string(),
+        }
+    }
+}
+#[allow(dead_code)]
+impl From<&String> for CompressionMethod{
+    fn from(s: &String) ->CompressionMethod{
+        use CompressionMethod::*;
+        match s.as_str(){
+            "gzip" => Gzip,
+            _ => None
+        }
+    }
+}
+
+impl Response {
+    pub fn compress(&mut self, method: CompressionMethod) {
+        self.headers
+            .insert(
+                "Content-Encoding".to_string(),
+                method.into(),
+            );
     }
 }

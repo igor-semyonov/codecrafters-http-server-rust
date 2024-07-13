@@ -72,7 +72,7 @@ fn handle_connection(
         &request_buffer[0..request_buffer_len];
     let request: Request = request_buffer.into();
 
-    let response = if request.method == HttpMethod::Get
+    let mut response = if request.method == HttpMethod::Get
         && request.target == "/"
     {
         Response {
@@ -229,6 +229,16 @@ fn handle_connection(
             body: "".to_string(),
         }
     };
+
+    if let Some(compression_method) = request
+        .headers
+        .get("Accept-Encoding")
+    {
+        if compression_method == "gzip" {
+            response.compress(compression_method.into());
+        };
+    };
+
     let s: String = response
         .clone()
         .into();
