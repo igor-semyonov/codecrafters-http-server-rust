@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Debug, Clone)]
 pub struct Response {
     pub version: HttpVersion,
     pub code: ResponseCode,
@@ -7,7 +8,7 @@ pub struct Response {
     pub body: String,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum ResponseCode {
     C200,
     C404,
@@ -81,7 +82,7 @@ pub enum HttpMethod {
     Put,
     Post,
 }
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum HttpVersion {
     V1_1,
 }
