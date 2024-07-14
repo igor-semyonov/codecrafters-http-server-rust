@@ -5,7 +5,7 @@ pub struct Response {
     pub version: HttpVersion,
     pub code: ResponseCode,
     pub headers: HashMap<String, String>,
-    pub body: String,
+    pub body: Vec<u8>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -38,7 +38,7 @@ impl From<ResponseCode> for &str {
     }
 }
 
-impl From<Response> for String {
+impl From<Response> for Vec<u8> {
     fn from(response: Response) -> Self {
         let status_code: u32 = response
             .code
@@ -59,17 +59,16 @@ impl From<Response> for String {
             )
             .collect::<Vec<String>>()
             .join("\r\n");
-
-        format!(
-            "HTTP/{} {} {}\r\n{}\r\n\r\n{}",
+        let first = format!(
+            "HTTP/{} {} {}\r\n{}\r\n\r\n",
             std::convert::Into::<&str>::into(
                 response.version
             ),
             status_code,
             status_text,
             headers,
-            response.body,
-        )
+        );
+        [first.as_bytes(), &response.body].concat()
     }
 }
 
@@ -246,5 +245,22 @@ impl Response {
                 "Content-Encoding".to_string(),
                 method.into(),
             );
+        use flate2::write::GzEncoder;
+        use flate2::Compression;
+        use std::io::prelude::*;
+        let mut encoder = GzEncoder::new(
+            Vec::new(),
+            Compression::new(9),
+        );
+        let _ = encoder.write_all(&self.body);
+        let encoded_body = match encoder.finish() {
+            Ok(b) => b,
+            Err(_) => vec![],
+        };
+        *self
+            .headers
+            .get_mut("Content-Length")
+            .unwrap() = encoded_body.len().to_string();
+        self.body = encoded_body;
     }
 }

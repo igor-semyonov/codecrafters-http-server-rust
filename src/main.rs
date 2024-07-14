@@ -79,7 +79,7 @@ fn handle_connection(
             version: HttpVersion::V1_1,
             code: ResponseCode::C200,
             headers: std::collections::HashMap::new(),
-            body: "".to_string(),
+            body: vec![],
         }
     } else if request.method == HttpMethod::Get
         && request
@@ -90,12 +90,12 @@ fn handle_connection(
             .headers
             .get("User-Agent")
             .unwrap()
-            .to_string();
+            .as_bytes()
+            .to_vec();
         let mut headers = std::collections::HashMap::new();
         headers.insert(
             "Content-Length".to_string(),
-            body.as_bytes()
-                .len()
+            body.len()
                 .to_string(),
         );
         headers.insert(
@@ -116,11 +116,11 @@ fn handle_connection(
         let body = request
             .target
             .trim_start_matches("/echo/")
-            .to_string();
+            .as_bytes().to_vec();
         let mut headers = std::collections::HashMap::new();
         headers.insert(
             "Content-Length".to_string(),
-            body.as_bytes()
+            body
                 .len()
                 .to_string(),
         );
@@ -157,9 +157,10 @@ fn handle_connection(
             Ok(body) => {
                 let mut headers =
                     std::collections::HashMap::new();
+                let body = body.as_bytes().to_vec();
                 headers.insert(
                     "Content-Length".to_string(),
-                    body.as_bytes()
+                    body
                         .len()
                         .to_string(),
                 );
@@ -181,7 +182,7 @@ fn handle_connection(
                     version: HttpVersion::V1_1,
                     code: ResponseCode::C404,
                     headers,
-                    body: "".to_string(),
+                    body: vec![],
                 }
             }
         }
@@ -208,7 +209,7 @@ fn handle_connection(
                 version: HttpVersion::V1_1,
                 code: ResponseCode::C201,
                 headers,
-                body: "".to_string(),
+                body: vec![],
             },
             Err(e) => Response {
                 version: HttpVersion::V1_1,
@@ -217,7 +218,7 @@ fn handle_connection(
                 body: format!(
                     "Encountered error {}",
                     e
-                ),
+                ).as_bytes().to_vec(),
             },
         }
     } else {
@@ -226,7 +227,7 @@ fn handle_connection(
             version: HttpVersion::V1_1,
             code: ResponseCode::C404,
             headers,
-            body: "".to_string(),
+            body: vec![],
         }
     };
 
@@ -235,20 +236,18 @@ fn handle_connection(
         .headers
         .get("Accept-Encoding")
     {
-        match compression_methods
-            .split(",")
-            .map(|s| s.trim())
-            .filter(|s| accepted_compression_schemes.contains(s))
-            .next(){
-                Some(compression_method) =>response.compress(compression_method.into()),
-                None => {}
-            };
+        if let Some(compression_method) =
+            compression_methods
+                .split(",")
+                .map(|s| s.trim())
+                .find(|s| {
+                    accepted_compression_schemes.contains(s)
+                })
+        {
+            response.compress(compression_method.into())
+        };
     };
 
-    let s: String = response
-        .clone()
-        .into();
-    let s_bytes = s.as_bytes();
     // println!(
     //     "{:#?}",
     //     &request
@@ -257,7 +256,8 @@ fn handle_connection(
     //     "{:#?}",
     //     &response
     // );
-    open_stream.write_all(s_bytes)?;
+    let response_bytes: Vec<u8> = response.into();
+    open_stream.write_all(&response_bytes)?;
 
     Ok(())
 }
